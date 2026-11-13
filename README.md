@@ -6,9 +6,9 @@ ThreatSight attacks an agent through its real tools, judges it only on what it a
 
 [![regression](https://github.com/dibun75/threatsight/actions/workflows/regression.yml/badge.svg)](https://github.com/dibun75/threatsight/actions/workflows/regression.yml) · Apache-2.0
 
-![The agents page: risk score per agent, the attack, what the agent said and what it actually did, before and after the guardrail](docs/images/agents.png)
+![The command center: a live map of attack routes, botnet C2s and reported indicators from public feeds, next to the organisation's own review queue](docs/images/command-center.jpg)
 
-*The agent says "I can't approve payments without a review" while it calls `approve_payment` for NOK 482,000. ThreatSight scores the call, not the sentence.*
+*The command center joins live public threat intelligence (Cloudflare Radar, DShield, abuse.ch) with your own agents, assets and evidence. Everything shown here is a synthetic organisation.*
 
 ## Results
 
@@ -72,6 +72,10 @@ hostile input -> agent (model) -> proposed tool call -> policy gateway -> tool -
 - **Guardrails are plain JSON rules** in a policy gateway. Unknown rules are rejected and any error denies the call. Risky calls can wait for a named person.
 - **Evidence is hash-chained.** Every record carries the hash of the one before, so editing, removing or reordering a record breaks the chain.
 - **Normal work is checked too.** A fix that stops the attack but breaks routine tasks does not count.
+
+![The agents page: each agent's risk score and the path from untrusted input through its tools to the data it can reach](docs/images/agents.jpg)
+
+*In the attack, the agent says "I can't approve payments without a review" while it calls `approve_payment` for NOK 482,000. ThreatSight scores the call, not the sentence.*
 
 Details: [docs/how-it-works.md](docs/how-it-works.md).
 
