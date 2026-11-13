@@ -73,7 +73,7 @@ hostile input -> agent (model) -> proposed tool call -> policy gateway -> tool -
 - **Evidence is hash-chained.** Every record carries the hash of the one before, so editing, removing or reordering a record breaks the chain.
 - **Normal work is checked too.** A fix that stops the attack but breaks routine tasks does not count.
 
-![The agents page: each agent's risk score and the path from untrusted input through its tools to the data it can reach](docs/images/agents.png)
+![The agents page: each agent's risk score and the path from untrusted input through its tools to the data it can reach](docs/images/agents.jpg)
 
 *In the attack, the agent says "I can't approve payments without a review" while it calls `approve_payment` for NOK 482,000. ThreatSight scores the call, not the sentence.*
 
