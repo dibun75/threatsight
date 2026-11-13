@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "threatsight.fullname" . }}-config
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+data:
+  THREATSIGHT_ENV: {{ .Values.config.env | quote }}
+  THREATSIGHT_DEPLOYMENT_PROFILE: {{ .Values.global.deploymentProfile | quote }}
+  THREATSIGHT_PUBLIC_ORIGIN: {{ .Values.publicOrigin | quote }}
+  THREATSIGHT_AUTH_MODE: {{ .Values.config.authMode | quote }}
+  THREATSIGHT_OPENAPI_ENABLED: {{ .Values.config.openapiEnabled | toString | quote }}
+  THREATSIGHT_SANDBOX_DEFAULT: {{ .Values.config.sandboxDefault | toString | quote }}
+  THREATSIGHT_PUBLIC_DEMO: {{ .Values.config.publicDemo | toString | quote }}
+  THREATSIGHT_ALLOW_SYNTHETIC_LOADERS: {{ .Values.config.allowSyntheticLoaders | toString | quote }}
+  THREATSIGHT_LOG_JSON: {{ .Values.config.logJson | toString | quote }}
+  THREATSIGHT_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  THREATSIGHT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  THREATSIGHT_WEB_ORIGINS: {{ .Values.config.webOrigins | quote }}
+  THREATSIGHT_OIDC_ISSUER: {{ .Values.config.oidc.issuer | quote }}
+  THREATSIGHT_OIDC_AUDIENCE: {{ .Values.config.oidc.audience | quote }}
+  THREATSIGHT_OIDC_CLIENT_ID: {{ .Values.config.oidc.clientId | quote }}
+  THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: {{ .Values.config.oidc.authorizationEndpoint | quote }}
+  THREATSIGHT_OIDC_TOKEN_ENDPOINT: {{ .Values.config.oidc.tokenEndpoint | quote }}
+  THREATSIGHT_OIDC_JWKS_URI: {{ .Values.config.oidc.jwksUri | quote }}
+  THREATSIGHT_OIDC_REDIRECT_URI: {{ .Values.config.oidc.redirectUri | quote }}
+  THREATSIGHT_OIDC_OPERATOR_GROUPS: {{ .Values.config.oidc.operatorGroups | quote }}
+  THREATSIGHT_OIDC_AUDITOR_GROUPS: {{ .Values.config.oidc.auditorGroups | quote }}
+  THREATSIGHT_OIDC_WORKSPACE_ADMIN_GROUPS: {{ .Values.config.oidc.workspaceAdminGroups | quote }}
+  THREATSIGHT_OIDC_PLATFORM_ADMIN_GROUPS: {{ .Values.config.oidc.platformAdminGroups | quote }}
+  THREATSIGHT_RUN_MIGRATIONS: "false"

@@ -1,0 +1,27 @@
+# Disposable Keycloak + local TLS for Phase 3G OIDC browser acceptance.
+# Isolated project name. Destroy after use. Never mount production secrets.
+name: threatsight-oidc-disp
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--http-port=8080", "--hostname-strict=false"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: disposable-admin-only
+    ports:
+      - "127.0.0.1:18081:8080"
+    networks: [oidc]
+
+  edge:
+    image: caddy:2.8-alpine
+    ports:
+      - "127.0.0.1:18443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [keycloak]
+    networks: [oidc]
+
+networks:
+  oidc:
+    driver: bridge

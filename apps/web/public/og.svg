@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#071217"/>
+  <circle cx="430" cy="300" r="150" fill="none" stroke="#24424B" stroke-width="2"/>
+  <circle cx="620" cy="250" r="90" fill="none" stroke="#4E8FA8" stroke-width="2"/>
+  <circle cx="760" cy="340" r="70" fill="#122B34" stroke="#35B8A0" stroke-width="3"/>
+  <path d="M430 300 L620 250 L760 340" fill="none" stroke="#9FB2B7" stroke-width="2"/>
+  <text x="80" y="120" fill="#9FB2B7" font-family="Segoe UI, Helvetica, sans-serif" font-size="28">ThreatSight</text>
+  <text x="80" y="210" fill="#F3F5F2" font-family="Segoe UI, Helvetica, sans-serif" font-size="48">See which threats can reach</text>
+  <text x="80" y="270" fill="#F3F5F2" font-family="Segoe UI, Helvetica, sans-serif" font-size="48">what matters.</text>
+  <text x="80" y="520" fill="#9FB2B7" font-family="Segoe UI, Helvetica, sans-serif" font-size="24">Synthetic enterprise · Live public intelligence</text>
+</svg>

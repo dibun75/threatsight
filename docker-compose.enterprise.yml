@@ -1,0 +1,98 @@
+name: threatsight
+
+# Production-like overlay. Use with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.enterprise.yml up -d
+# or: make up-enterprise
+#
+# Uses minimal production images, runs migrations once, does not start demo
+# sidecars, and does not publish PostgreSQL on the host.
+
+services:
+  postgres:
+    ports: !override []
+
+  migrate:
+    container_name: threatsight-migrate
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-local}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    command: ["python", "-m", "threatsight_api.migrate"]
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-production}
+      THREATSIGHT_LOG_LEVEL: ${THREATSIGHT_LOG_LEVEL:-INFO}
+      THREATSIGHT_LOG_JSON: ${THREATSIGHT_LOG_JSON:-true}
+      THREATSIGHT_DATABASE_URL: ${THREATSIGHT_DATABASE_URL:-postgresql+psycopg://threatsight:changeme-dev-only@postgres:5432/threatsight}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-local}
+    build: !override
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-production}
+      THREATSIGHT_RUN_MIGRATIONS: "false"
+      THREATSIGHT_ASSURANCE_ADAPTER: ${THREATSIGHT_ASSURANCE_ADAPTER:-inprocess}
+      THREATSIGHT_DISCOVERY_ADAPTER: ${THREATSIGHT_DISCOVERY_ADAPTER:-inprocess}
+      THREATSIGHT_API_TOKEN: ${THREATSIGHT_API_TOKEN:-}
+      THREATSIGHT_AUTH_MODE: ${THREATSIGHT_AUTH_MODE:-oidc}
+      THREATSIGHT_PUBLIC_DEMO: "false"
+      THREATSIGHT_OIDC_ISSUER: ${THREATSIGHT_OIDC_ISSUER:-}
+      THREATSIGHT_OIDC_AUDIENCE: ${THREATSIGHT_OIDC_AUDIENCE:-}
+      THREATSIGHT_OIDC_CLIENT_ID: ${THREATSIGHT_OIDC_CLIENT_ID:-}
+      THREATSIGHT_OIDC_CLIENT_SECRET: ${THREATSIGHT_OIDC_CLIENT_SECRET:-}
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: ${THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT:-}
+      THREATSIGHT_OIDC_TOKEN_ENDPOINT: ${THREATSIGHT_OIDC_TOKEN_ENDPOINT:-}
+      THREATSIGHT_OIDC_JWKS_URI: ${THREATSIGHT_OIDC_JWKS_URI:-}
+      THREATSIGHT_OIDC_REDIRECT_URI: ${THREATSIGHT_OIDC_REDIRECT_URI:-}
+      THREATSIGHT_OIDC_OPERATOR_GROUPS: ${THREATSIGHT_OIDC_OPERATOR_GROUPS:-}
+      THREATSIGHT_OIDC_AUDITOR_GROUPS: ${THREATSIGHT_OIDC_AUDITOR_GROUPS:-}
+      THREATSIGHT_OIDC_WORKSPACE_ADMIN_GROUPS: ${THREATSIGHT_OIDC_WORKSPACE_ADMIN_GROUPS:-}
+      THREATSIGHT_OIDC_PLATFORM_ADMIN_GROUPS: ${THREATSIGHT_OIDC_PLATFORM_ADMIN_GROUPS:-}
+      THREATSIGHT_API_TOKEN_SUBJECT: ${THREATSIGHT_API_TOKEN_SUBJECT:-web-proxy}
+      THREATSIGHT_API_TOKEN_ROLE: ${THREATSIGHT_API_TOKEN_ROLE:-operator}
+      THREATSIGHT_OPENAPI_ENABLED: ${THREATSIGHT_OPENAPI_ENABLED:-false}
+    depends_on: !override
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-local}
+    build: !override
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-production}
+    depends_on: !override
+      migrate:
+        condition: service_completed_successfully
+
+  runner:
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-local}
+    build: !override
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+
+  web:
+    image: threatsight-web:${THREATSIGHT_IMAGE_TAG:-local}
+    build: !override
+      context: ./apps/web
+      dockerfile: Dockerfile.production
+      args:
+        API_INTERNAL_URL: ${API_INTERNAL_URL:-http://threatsight-api:8000}
+    environment:
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://threatsight-api:8000}
+      API_INTERNAL_TOKEN: ${THREATSIGHT_API_TOKEN:-}
+      API_INTERNAL_SUBJECT: ${THREATSIGHT_API_TOKEN_SUBJECT:-web-proxy}
+      API_INTERNAL_ROLE: ${THREATSIGHT_API_TOKEN_ROLE:-operator}
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: ${THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT:-}
+
+  demo-agent:
+    profiles: ["lab"]
+
+  demo-site:
+    profiles: ["lab"]

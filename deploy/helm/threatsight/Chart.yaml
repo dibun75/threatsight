@@ -1,0 +1,15 @@
+apiVersion: v2
+name: threatsight
+description: ThreatSight enterprise pilot chart (not a commercial HA/SLA claim)
+type: application
+version: 0.3.0
+appVersion: "3f-pilot"
+keywords:
+  - threatsight
+  - security
+  - pilot
+maintainers:
+  - name: ThreatSight maintainers
+annotations:
+  threatsight.io/profile: pilot-kubernetes
+  threatsight.io/claims: "pilot packaging only; not commercial production, HA, SLA, or certification"

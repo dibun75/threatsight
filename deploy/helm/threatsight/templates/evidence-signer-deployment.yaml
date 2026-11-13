@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "threatsight.fullname" . }}-evidence-signer
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: evidence-signer
+spec:
+  replicas: {{ .Values.evidenceSigner.replicas }}
+  selector:
+    matchLabels:
+      {{- include "threatsight.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: evidence-signer
+  template:
+    metadata:
+      labels:
+        {{- include "threatsight.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: evidence-signer
+      annotations:
+        checksum/config: {{ include "threatsight.configChecksum" . }}
+    spec:
+      serviceAccountName: {{ include "threatsight.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: evidence-signer
+          image: {{ include "threatsight.image" (list .Values.image.api.repository .Values.image.api.tag .Values.image.api.digest) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command: ["python", "-m", "threatsight_api.evidence_signer"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "threatsight.fullname" . }}-config
+          env:
+            - name: THREATSIGHT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.databaseUrlSecretName }}
+                  key: {{ .Values.secrets.databaseUrlSecretKey }}
+            - name: THREATSIGHT_EVIDENCE_SIGNING_KEY_FILE
+              value: /run/secrets/evidence_signing_key
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.evidenceSigner.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: signing-key
+              mountPath: /run/secrets/evidence_signing_key
+              subPath: {{ .Values.secrets.signingKeySecretKey }}
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: signing-key
+          secret:
+            secretName: {{ .Values.secrets.signingKeySecretName }}
+            defaultMode: 0400

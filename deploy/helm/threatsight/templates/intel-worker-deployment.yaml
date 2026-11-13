@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "threatsight.fullname" . }}-intel-worker
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: intel-worker
+spec:
+  replicas: {{ .Values.intelWorker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "threatsight.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: intel-worker
+  template:
+    metadata:
+      labels:
+        {{- include "threatsight.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: intel-worker
+      annotations:
+        checksum/config: {{ include "threatsight.configChecksum" . }}
+    spec:
+      serviceAccountName: {{ include "threatsight.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: intel-worker
+          image: {{ include "threatsight.image" (list .Values.image.api.repository .Values.image.api.tag .Values.image.api.digest) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command: ["python", "-m", "threatsight_api.intel"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "threatsight.fullname" . }}-config
+          env:
+            - name: THREATSIGHT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.databaseUrlSecretName }}
+                  key: {{ .Values.secrets.databaseUrlSecretKey }}
+            - name: THREATSIGHT_RADAR_TOKEN_FILE
+              value: /run/secrets/cloudflare_radar_token
+            - name: THREATSIGHT_VULNCHECK_TOKEN_FILE
+              value: /run/secrets/vulncheck_token
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.intelWorker.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: radar
+              mountPath: /run/secrets/cloudflare_radar_token
+              subPath: {{ .Values.secrets.radarTokenSecretKey }}
+              readOnly: true
+            - name: vulncheck
+              mountPath: /run/secrets/vulncheck_token
+              subPath: {{ .Values.secrets.vulncheckTokenSecretKey }}
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: radar
+          secret:
+            secretName: {{ .Values.secrets.radarTokenSecretName }}
+            defaultMode: 0400
+        - name: vulncheck
+          secret:
+            secretName: {{ .Values.secrets.vulncheckTokenSecretName }}
+            defaultMode: 0400

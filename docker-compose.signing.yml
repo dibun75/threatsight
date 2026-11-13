@@ -1,0 +1,52 @@
+# Optional evidence-signing worker. Do not include until the host private key exists.
+# The API, web, intel-worker, runner, postgres, demo, and tunnel do not receive the key.
+services:
+  evidence-signer:
+    container_name: threatsight-evidence-signer
+    image: threatsight-api:${THREATSIGHT_SIGNER_IMAGE_TAG:-37877a2}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    command: ["python", "-m", "threatsight_api.evidence_signer"]
+    user: "10001:10001"
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-development}
+      THREATSIGHT_DATABASE_URL: ${THREATSIGHT_DATABASE_URL:-postgresql+psycopg://threatsight:changeme-dev-only@postgres:5432/threatsight}
+      THREATSIGHT_DEPLOYMENT_ID: ${THREATSIGHT_DEPLOYMENT_ID:-threatsight-local}
+      THREATSIGHT_EVIDENCE_SIGNING_KEY_FILE: /run/secrets/evidence_signing_key
+      THREATSIGHT_EVIDENCE_SIGNING_KEY_ID: ${THREATSIGHT_EVIDENCE_SIGNING_KEY_ID:-local-ed25519-1}
+      THREATSIGHT_SIGNER_POLL_SECONDS: ${THREATSIGHT_SIGNER_POLL_SECONDS:-2}
+      THREATSIGHT_SIGNING_ENABLED: "true"
+    volumes:
+      - type: bind
+        source: ${THREATSIGHT_EVIDENCE_SIGNING_KEY_PATH:?set the host private-key path}
+        target: /run/secrets/evidence_signing_key
+        read_only: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,time; from threatsight_api.signing.worker import readiness; ok,reason=readiness(); assert ok, reason; assert time.time()-os.path.getmtime('/tmp/evidence-signer-alive')<120",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

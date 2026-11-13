@@ -1,0 +1,53 @@
+name: regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  isolated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API
+        run: pip install -e "./apps/api[dev]"
+      - name: Isolated tests
+        env:
+          THREATSIGHT_RUN_MIGRATIONS: "false"
+        run: pytest apps/api/tests tests/test_threatsight_docker.py -q
+
+  world:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install world
+        run: pip install -e "./apps/world[dev]"
+      - name: World tests
+        run: pytest apps/world/tests -q
+      - name: Agent suite under each organisation's policy
+        run: threatsight-world suite --profile all
+      - name: Package builds and installs cleanly
+        run: |
+          python -m build apps/world --outdir dist
+          twine check dist/*
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/*.whl
+          cd /tmp && /tmp/clean/bin/threatsight-world suite --profile all
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate lab compose
+        run: docker compose -f docker-compose.yml config >/dev/null
+      - name: Validate enterprise overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.enterprise.yml config >/dev/null
+      - name: Validate the quick-start compose file
+        run: docker compose -f docker-compose.yml -f docker-compose.quickstart.yml config >/dev/null

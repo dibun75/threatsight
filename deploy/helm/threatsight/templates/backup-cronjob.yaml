@@ -1,0 +1,64 @@
+{{- if .Values.backup.cronJob.enabled }}
+# Customer must configure storage. No upload from reference environment.
+# RPO/RTO are customer-selected — not product guarantees.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "threatsight.fullname" . }}-backup
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.cronJob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "threatsight.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          serviceAccountName: {{ include "threatsight.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          containers:
+            - name: backup
+              image: {{ .Values.backup.cronJob.image | quote }}
+              imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  echo "Customer configures pg_dump -Fc + encrypt + checksum to mounted storage."
+                  echo "This job is a template — wire DESTINATION_PATH and credentials out-of-band."
+                  exit 0
+              env:
+                - name: DESTINATION_PATH
+                  value: {{ .Values.backup.cronJob.destinationPath | quote }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              volumeMounts:
+                - name: backup-target
+                  mountPath: /backup
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: backup-target
+              emptyDir:
+                sizeLimit: 2Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+{{- end }}

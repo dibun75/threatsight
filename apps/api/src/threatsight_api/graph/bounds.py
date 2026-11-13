@@ -1,0 +1,16 @@
+"""Hard bounds for graph builds and neighborhood reads."""
+
+from __future__ import annotations
+
+MAX_NODES = 500
+MAX_EDGES = 1000
+MAX_OBSERVATIONS = 1000
+MAX_CONFLICTS = 500
+MAX_MEMBERSHIPS = 200
+MAX_DEGREE = 100
+MAX_NEIGHBORS = 50
+MAX_JOBS = 10
+MAX_ATTRIBUTE_BYTES = 8192
+MAX_BUILD_SECONDS = 5
+MAX_LABEL = 80
+MAX_ID = 500

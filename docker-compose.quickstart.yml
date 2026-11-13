@@ -1,0 +1,25 @@
+# Quick start on your own machine with the published images, no build needed:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.quickstart.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.quickstart.yml up -d
+#   open http://localhost:3000
+#
+# Sign-in stays off and everything listens on 127.0.0.1 only. Images come from GitHub Container
+# Registry after each release (see .github/workflows/release.yml); set THREATSIGHT_VERSION to pin one.
+# Without network access to the registry, drop the pull step and add --build to build locally.
+services:
+  api:
+    image: ghcr.io/dibun75/threatsight-api:${THREATSIGHT_VERSION:-latest}
+    pull_policy: missing
+  demo-agent:
+    image: ghcr.io/dibun75/threatsight-demo-agent:${THREATSIGHT_VERSION:-latest}
+    pull_policy: missing
+  demo-site:
+    image: ghcr.io/dibun75/threatsight-demo-site:${THREATSIGHT_VERSION:-latest}
+    pull_policy: missing
+  world:
+    image: ghcr.io/dibun75/threatsight-world:${THREATSIGHT_VERSION:-latest}
+    pull_policy: missing
+  web:
+    image: ghcr.io/dibun75/threatsight-web:${THREATSIGHT_VERSION:-latest}
+    pull_policy: missing

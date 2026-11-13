@@ -1,0 +1,11 @@
+{
+  "name": "nordvik-hardened",
+  "description": "Least-privilege rules for the Nordvik agents. on_fail=hold sends the call to a named approver instead of refusing it.",
+  "rules": [
+    {"id": "case-owner-only", "tool": "lookup_case", "type": "requester_owns_case"},
+    {"id": "pay-registered-suppliers", "tool": "approve_payment", "type": "supplier_registered", "on_fail": "hold", "note": "New or unknown bank account: hold for a person to verify with the supplier by phone."},
+    {"id": "pay-limit-needs-approver", "tool": "approve_payment", "type": "max_amount_without_approver", "limit": 50000, "on_fail": "hold"},
+    {"id": "cloud-read-only", "tool": "cloud_admin", "type": "allow_actions", "actions": ["list_backups", "read_logs"]},
+    {"id": "email-internal-only", "tool": "send_email", "type": "internal_recipients_only"}
+  ]
+}

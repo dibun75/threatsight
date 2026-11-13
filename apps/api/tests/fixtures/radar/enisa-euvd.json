@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "id": "EUVD-2026-12345",
+      "enisaUuid": "12345678-1234-1234-1234-123456789012",
+      "description": "A bounded vulnerability description for CVE-2026-12345.",
+      "datePublished": "Oct 29, 2026, 10:00:00 AM",
+      "dateUpdated": "Oct 29, 2026, 11:00:00 AM",
+      "baseScore": 9.8,
+      "aliases": "CVE-2026-12345\n",
+      "assigner": "Example CNA",
+      "epss": 0.72,
+      "enisaIdProduct": [{"name": "Secure Product"}],
+      "enisaIdVendor": [{"name": "Example Vendor"}]
+    }
+  ],
+  "total": 1
+}

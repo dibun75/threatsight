@@ -1,0 +1,33 @@
+# Customer-resident ThreatSight runner. Outbound only.
+# Replace the image tag with the release the control plane expects.
+# Do not put a real credential in this file. Mount it at the path below.
+services:
+  runner:
+    image: threatsight-api:0357a00
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 128
+    environment:
+      THREATSIGHT_ENV: production
+      THREATSIGHT_CONTROL_PLANE_URL: https://threatsight.example
+      THREATSIGHT_RUNNER_CREDENTIAL_FILE: /run/secrets/runner-credential
+      THREATSIGHT_RUNNER_HEALTH_PORT: "8092"
+      THREATSIGHT_KILL_SWITCH: "false"
+    volumes:
+      - type: bind
+        source: ./runner-credential
+        target: /run/secrets/runner-credential
+        read_only: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,327 @@
+name: threatsight
+
+x-threatsight-labels: &threatsight-labels
+  com.threatsight.project: threatsight
+  com.threatsight.generation: current
+
+x-logging: &threatsight-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    container_name: threatsight-postgres
+    image: threatsight-postgres:${THREATSIGHT_IMAGE_TAG:-23f8def}
+    build:
+      context: ./docker/postgres
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-threatsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-threatsight}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - threatsight_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-threatsight} -d ${POSTGRES_DB:-threatsight}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+  api:
+    container_name: threatsight-api
+    # `make deploy` sets THREATSIGHT_IMAGE_TAG to the deployed commit, so tags match the code they hold.
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-830671f}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: api
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-development}
+      THREATSIGHT_LOG_LEVEL: ${THREATSIGHT_LOG_LEVEL:-INFO}
+      THREATSIGHT_LOG_JSON: ${THREATSIGHT_LOG_JSON:-true}
+      THREATSIGHT_DATABASE_URL: ${THREATSIGHT_DATABASE_URL:-postgresql+psycopg://threatsight:changeme-dev-only@postgres:5432/threatsight}
+      THREATSIGHT_CORS_ORIGINS: ${THREATSIGHT_CORS_ORIGINS:-http://localhost:3000}
+      THREATSIGHT_WEB_ORIGINS: ${THREATSIGHT_WEB_ORIGINS:-}
+      THREATSIGHT_SANDBOX_DEFAULT: ${THREATSIGHT_SANDBOX_DEFAULT:-true}
+      THREATSIGHT_KILL_SWITCH: ${THREATSIGHT_KILL_SWITCH:-false}
+      THREATSIGHT_RUN_MIGRATIONS: ${THREATSIGHT_RUN_MIGRATIONS:-true}
+      THREATSIGHT_EXTRACTION_PROVIDER: ${THREATSIGHT_EXTRACTION_PROVIDER:-heuristic}
+      THREATSIGHT_INTELLIGENCE_PROVIDER: ${THREATSIGHT_INTELLIGENCE_PROVIDER:-heuristic}
+      THREATSIGHT_OPENAI_API_KEY: ${THREATSIGHT_OPENAI_API_KEY:-}
+      THREATSIGHT_OPENAI_MODEL: ${THREATSIGHT_OPENAI_MODEL:-gpt-4o-mini}
+      THREATSIGHT_OPENAI_BASE_URL: ${THREATSIGHT_OPENAI_BASE_URL:-https://api.openai.com/v1}
+      THREATSIGHT_MAX_DOCUMENT_BYTES: ${THREATSIGHT_MAX_DOCUMENT_BYTES:-10485760}
+      THREATSIGHT_ASSURANCE_ADAPTER: ${THREATSIGHT_ASSURANCE_ADAPTER:-http}
+      THREATSIGHT_DEMO_AGENT_URL: ${THREATSIGHT_DEMO_AGENT_URL:-http://demo-agent:8090}
+      THREATSIGHT_DISCOVERY_ADAPTER: ${THREATSIGHT_DISCOVERY_ADAPTER:-http}
+      THREATSIGHT_DEMO_SITE_URL: ${THREATSIGHT_DEMO_SITE_URL:-http://demo-site:8091}
+      THREATSIGHT_API_TOKEN: ${THREATSIGHT_API_TOKEN:-}
+      THREATSIGHT_AUTH_MODE: ${THREATSIGHT_AUTH_MODE:-public_demo}
+      THREATSIGHT_PUBLIC_DEMO: ${THREATSIGHT_PUBLIC_DEMO:-true}
+      THREATSIGHT_OIDC_ISSUER: ${THREATSIGHT_OIDC_ISSUER:-}
+      THREATSIGHT_OIDC_AUDIENCE: ${THREATSIGHT_OIDC_AUDIENCE:-}
+      THREATSIGHT_OIDC_CLIENT_ID: ${THREATSIGHT_OIDC_CLIENT_ID:-}
+      THREATSIGHT_OIDC_CLIENT_SECRET: ${THREATSIGHT_OIDC_CLIENT_SECRET:-}
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: ${THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT:-}
+      THREATSIGHT_OIDC_TOKEN_ENDPOINT: ${THREATSIGHT_OIDC_TOKEN_ENDPOINT:-}
+      THREATSIGHT_OIDC_JWKS_URI: ${THREATSIGHT_OIDC_JWKS_URI:-}
+      THREATSIGHT_OIDC_REDIRECT_URI: ${THREATSIGHT_OIDC_REDIRECT_URI:-}
+      THREATSIGHT_OIDC_OPERATOR_GROUPS: ${THREATSIGHT_OIDC_OPERATOR_GROUPS:-}
+      THREATSIGHT_OIDC_AUDITOR_GROUPS: ${THREATSIGHT_OIDC_AUDITOR_GROUPS:-}
+      THREATSIGHT_OIDC_WORKSPACE_ADMIN_GROUPS: ${THREATSIGHT_OIDC_WORKSPACE_ADMIN_GROUPS:-}
+      THREATSIGHT_OIDC_PLATFORM_ADMIN_GROUPS: ${THREATSIGHT_OIDC_PLATFORM_ADMIN_GROUPS:-}
+      THREATSIGHT_OPENAPI_ENABLED: ${THREATSIGHT_OPENAPI_ENABLED:-false}
+      THREATSIGHT_EVIDENCE_FRESH_DAYS: ${THREATSIGHT_EVIDENCE_FRESH_DAYS:-30}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      demo-agent:
+        condition: service_healthy
+      demo-site:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+  worker:
+    container_name: threatsight-worker
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-830671f}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    command: ["python", "-m", "threatsight_api.worker"]
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: worker
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-development}
+      THREATSIGHT_DATABASE_URL: ${THREATSIGHT_DATABASE_URL:-postgresql+psycopg://threatsight:changeme-dev-only@postgres:5432/threatsight}
+      THREATSIGHT_KILL_SWITCH: ${THREATSIGHT_KILL_SWITCH:-false}
+      THREATSIGHT_CONNECTOR_WORKSPACE_CONCURRENCY: ${THREATSIGHT_CONNECTOR_WORKSPACE_CONCURRENCY:-2}
+      THREATSIGHT_CONNECTOR_LEASE_SECONDS: ${THREATSIGHT_CONNECTOR_LEASE_SECONDS:-120}
+      THREATSIGHT_WORKER_POLL_SECONDS: ${THREATSIGHT_WORKER_POLL_SECONDS:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  intel-worker:
+    container_name: threatsight-intel-worker
+    # Immutable local tag for commit d85f926 (Phase 3H acceptance fixes).
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-830671f}
+    command: ["python", "-m", "threatsight_api.intel"]
+    environment:
+      THREATSIGHT_ENV: ${THREATSIGHT_ENV:-development}
+      THREATSIGHT_DATABASE_URL: ${THREATSIGHT_DATABASE_URL:-postgresql+psycopg://threatsight:changeme-dev-only@postgres:5432/threatsight}
+      THREATSIGHT_INTEL_KILL_SWITCH: ${THREATSIGHT_INTEL_KILL_SWITCH:-false}
+      THREATSIGHT_INTEL_ONLY: ${THREATSIGHT_INTEL_ONLY:-}
+      THREATSIGHT_KILL_SWITCH: ${THREATSIGHT_KILL_SWITCH:-false}
+      THREATSIGHT_RADAR_ENABLED: "false"
+      THREATSIGHT_DSHIELD_ENABLED: "false"
+      THREATSIGHT_THREATFOX_ENABLED: "false"
+      THREATSIGHT_THREATFOX_USAGE_MODE: ""
+      THREATSIGHT_FEODO_ENABLED: "false"
+      THREATSIGHT_URLHAUS_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,time; assert time.time()-os.path.getmtime('/tmp/intel-alive')<120"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+  runner:
+    container_name: threatsight-runner
+    image: threatsight-api:${THREATSIGHT_IMAGE_TAG:-830671f}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.production
+    command: ["python", "-m", "threatsight_api.runner"]
+    profiles: ["customer-runner"]
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: runner
+    environment:
+      THREATSIGHT_CONTROL_PLANE_URL: ${THREATSIGHT_CONTROL_PLANE_URL:-http://threatsight-api:8000}
+      THREATSIGHT_RUNNER_CREDENTIAL: ${THREATSIGHT_RUNNER_CREDENTIAL:-}
+      THREATSIGHT_KILL_SWITCH: ${THREATSIGHT_KILL_SWITCH:-false}
+      THREATSIGHT_WORKER_POLL_SECONDS: ${THREATSIGHT_WORKER_POLL_SECONDS:-2}
+      THREATSIGHT_MICROSOFT_LIVE: ${THREATSIGHT_MICROSOFT_LIVE:-false}
+      THREATSIGHT_MERAKI_LIVE: ${THREATSIGHT_MERAKI_LIVE:-false}
+      THREATSIGHT_JUNOS_LIVE: ${THREATSIGHT_JUNOS_LIVE:-false}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+  demo-agent:
+    container_name: threatsight-demo-agent
+    image: threatsight-demo-agent:${THREATSIGHT_IMAGE_TAG:-65ba935}
+    build:
+      context: ./apps/demo-agent
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: demo-agent
+    environment:
+      DEMO_AGENT_DEFAULT_MODE: open
+    expose:
+      - "8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  demo-site:
+    container_name: threatsight-demo-site
+    image: threatsight-demo-site:${THREATSIGHT_IMAGE_TAG:-65ba935}
+    build:
+      context: ./apps/demo-site
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: demo-site
+    expose:
+      - "8091"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  # Synthetic demo world (Nordvik Municipality, Helio Cloud; fictional). No database settings and no
+  # host port: the web app reaches it at /api/world/*, and runs live in their own volume, never in
+  # the ThreatSight Postgres. Called by container name, not "world" (shared docker network).
+  world:
+    container_name: threatsight-world
+    image: threatsight-world:${THREATSIGHT_IMAGE_TAG:-latest}
+    build:
+      context: ./apps/world
+      dockerfile: server.Dockerfile
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: world
+      com.threatsight.data: synthetic
+    environment:
+      THREATSIGHT_LLM_BASE_URL: ${THREATSIGHT_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      THREATSIGHT_LLM_MODEL: ${THREATSIGHT_LLM_MODEL:-}
+      THREATSIGHT_EVIDENCE_KEY: ${THREATSIGHT_WORLD_EVIDENCE_KEY:-}
+      THREATSIGHT_PUBLIC_URL: ${THREATSIGHT_PUBLIC_URL:-http://localhost:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - threatsight_world_runs:/runs
+      - ./apps/world/recordings:/app/recordings:ro
+    expose:
+      - "8092"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+  web:
+    container_name: threatsight-web
+    image: threatsight-web:${THREATSIGHT_IMAGE_TAG:-b9bd505}
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.production
+      args:
+        API_INTERNAL_URL: ${API_INTERNAL_URL:-http://threatsight-api:8000}
+        WORLD_INTERNAL_URL: http://threatsight-world:8092
+    labels:
+      <<: *threatsight-labels
+      com.threatsight.service: web
+    environment:
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://threatsight-api:8000}
+      WORLD_INTERNAL_URL: http://threatsight-world:8092
+      API_INTERNAL_TOKEN: ${THREATSIGHT_API_TOKEN:-}
+      API_INTERNAL_SUBJECT: ${THREATSIGHT_API_TOKEN_SUBJECT:-demo-viewer}
+      API_INTERNAL_ROLE: ${THREATSIGHT_API_TOKEN_ROLE:-viewer}
+      THREATSIGHT_AUTH_MODE: ${THREATSIGHT_AUTH_MODE:-public_demo}
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: ${THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT:-}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+      world:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging: *threatsight-logging
+
+volumes:
+  threatsight_pg:
+    name: threatsight_postgres_data
+  threatsight_world_runs:
+    name: threatsight_world_runs
+
+networks:
+  default:
+    name: threatsight_default

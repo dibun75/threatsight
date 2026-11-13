@@ -1,0 +1,29 @@
+{{- if .Values.podDisruptionBudget.api.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "threatsight.fullname" . }}-api
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.api.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "threatsight.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}
+{{- if .Values.podDisruptionBudget.web.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "threatsight.fullname" . }}-web
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.web.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "threatsight.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+{{- end }}

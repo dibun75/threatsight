@@ -1,0 +1,62 @@
+.settings .set-h3 {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.settings .set-source {
+  font-size: 0.75rem;
+  color: var(--ws-muted);
+  margin-left: 0.35rem;
+}
+
+.settings .set-ok {
+  color: var(--ws-fixed);
+}
+
+.settings .set-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.settings .set-grid {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.settings .set-row {
+  display: grid;
+  gap: 0.3rem;
+  max-width: 40rem;
+}
+
+.settings .set-row label {
+  font-size: 0.9rem;
+}
+
+.settings .set-row input:not([type="checkbox"]),
+.settings .set-row select {
+  font: inherit;
+  color: var(--ws-fg);
+  background: var(--ws-bg);
+  border: 1px solid var(--ws-line);
+  padding: 0.45rem 0.6rem;
+  max-width: 100%;
+}
+
+.settings .set-row input[type="checkbox"] {
+  justify-self: start;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.settings .set-help {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.settings code {
+  overflow-wrap: anywhere;
+}

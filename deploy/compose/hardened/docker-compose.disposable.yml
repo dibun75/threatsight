@@ -1,0 +1,163 @@
+# Disposable acceptance stack — isolated project only.
+# Does not mount production Radar/VulnCheck/signing material.
+name: threatsight-pilot-disp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pilotuser
+      POSTGRES_PASSWORD: pilot-disp-db-secret-9f3a
+      POSTGRES_DB: threatsight
+    ports: []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pilotuser -d threatsight"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  migrate:
+    image: ${THREATSIGHT_API_IMAGE:-threatsight-api:837e39a}
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    environment:
+      THREATSIGHT_ENV: production
+      THREATSIGHT_DEPLOYMENT_PROFILE: pilot-compose
+      THREATSIGHT_DATABASE_URL: postgresql+psycopg://pilotuser:pilot-disp-db-secret-9f3a@postgres:5432/threatsight
+      THREATSIGHT_RUN_MIGRATIONS: "false"
+      THREATSIGHT_AUTH_MODE: oidc
+      THREATSIGHT_PUBLIC_ORIGIN: https://threatsight.example
+      THREATSIGHT_CORS_ORIGINS: https://threatsight.example
+      THREATSIGHT_WEB_ORIGINS: https://threatsight.example
+      THREATSIGHT_OIDC_ISSUER: https://login.example/realms/threatsight
+      THREATSIGHT_OIDC_AUDIENCE: threatsight-api
+      THREATSIGHT_OIDC_CLIENT_ID: threatsight
+      THREATSIGHT_OIDC_CLIENT_SECRET: disposable-oidc-secret
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: https://login.example/realms/threatsight/protocol/openid-connect/auth
+      THREATSIGHT_OIDC_TOKEN_ENDPOINT: https://login.example/realms/threatsight/protocol/openid-connect/token
+      THREATSIGHT_OIDC_JWKS_URI: https://login.example/realms/threatsight/protocol/openid-connect/certs
+      THREATSIGHT_OIDC_REDIRECT_URI: https://threatsight.example/api/v1/auth/callback
+      THREATSIGHT_OPENAPI_ENABLED: "false"
+      THREATSIGHT_ALLOW_SYNTHETIC_LOADERS: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [internal]
+
+  api:
+    image: ${THREATSIGHT_API_IMAGE:-threatsight-api:837e39a}
+    environment:
+      THREATSIGHT_ENV: production
+      THREATSIGHT_DEPLOYMENT_PROFILE: pilot-compose
+      THREATSIGHT_AUTH_MODE: oidc
+      THREATSIGHT_DATABASE_URL_FILE: /run/secrets/database_url
+      THREATSIGHT_OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+      THREATSIGHT_PUBLIC_ORIGIN: https://threatsight.example
+      THREATSIGHT_CORS_ORIGINS: https://threatsight.example
+      THREATSIGHT_WEB_ORIGINS: https://threatsight.example
+      THREATSIGHT_OIDC_ISSUER: https://login.example/realms/threatsight
+      THREATSIGHT_OIDC_AUDIENCE: threatsight-api
+      THREATSIGHT_OIDC_CLIENT_ID: threatsight
+      THREATSIGHT_OIDC_AUTHORIZATION_ENDPOINT: https://login.example/realms/threatsight/protocol/openid-connect/auth
+      THREATSIGHT_OIDC_TOKEN_ENDPOINT: https://login.example/realms/threatsight/protocol/openid-connect/token
+      THREATSIGHT_OIDC_JWKS_URI: https://login.example/realms/threatsight/protocol/openid-connect/certs
+      THREATSIGHT_OIDC_REDIRECT_URI: https://threatsight.example/api/v1/auth/callback
+      THREATSIGHT_OPENAPI_ENABLED: "false"
+      THREATSIGHT_ALLOW_SYNTHETIC_LOADERS: "false"
+      THREATSIGHT_PUBLIC_DEMO: "false"
+      THREATSIGHT_RUN_MIGRATIONS: "false"
+    secrets:
+      - database_url
+      - oidc_client_secret
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:18080:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [internal]
+
+  web:
+    image: ${THREATSIGHT_WEB_IMAGE:-threatsight-web:837e39a}
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:13000:3000"
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [internal]
+
+  intel-worker:
+    image: ${THREATSIGHT_API_IMAGE:-threatsight-api:837e39a}
+    command: ["python", "-m", "threatsight_api.intel"]
+    environment:
+      THREATSIGHT_ENV: production
+      THREATSIGHT_DEPLOYMENT_PROFILE: pilot-compose
+      THREATSIGHT_DATABASE_URL_FILE: /run/secrets/database_url
+      THREATSIGHT_RADAR_TOKEN_FILE: /run/secrets/cloudflare_radar_token
+      THREATSIGHT_VULNCHECK_TOKEN_FILE: /run/secrets/vulncheck_token
+      THREATSIGHT_ALLOW_SYNTHETIC_LOADERS: "false"
+    secrets:
+      - database_url
+      - cloudflare_radar_token
+      - vulncheck_token
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [internal]
+
+  evidence-signer:
+    image: ${THREATSIGHT_API_IMAGE:-threatsight-api:837e39a}
+    command: ["python", "-m", "threatsight_api.evidence_signer"]
+    environment:
+      THREATSIGHT_ENV: production
+      THREATSIGHT_DEPLOYMENT_PROFILE: pilot-compose
+      THREATSIGHT_DATABASE_URL_FILE: /run/secrets/database_url
+      THREATSIGHT_EVIDENCE_SIGNING_KEY_FILE: /run/secrets/evidence_signing_key
+    secrets:
+      - database_url
+      - evidence_signing_key
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [internal]
+
+  edge:
+    image: caddy:2.8-alpine
+    ports:
+      - "127.0.0.1:18443:443"
+    volumes:
+      - ./Caddyfile.disposable:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+    networks: [internal]
+
+secrets:
+  database_url:
+    file: ./secrets/database_url
+  oidc_client_secret:
+    file: ./secrets/oidc_client_secret
+  cloudflare_radar_token:
+    file: ./secrets/cloudflare_radar_token
+  vulncheck_token:
+    file: ./secrets/vulncheck_token
+  evidence_signing_key:
+    file: ./secrets/evidence_signing_key
+
+networks:
+  internal:
+    driver: bridge

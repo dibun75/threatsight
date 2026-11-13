@@ -1,0 +1,17 @@
+name: threatsight
+
+# Optional Cloudflare Tunnel overlay. The shared infra network remains optional
+# for local installations and only the web origin joins it.
+services:
+  web:
+    labels:
+      caddy: "http://threatsight.io"
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+    networks:
+      - default
+      - infra_gateway
+
+networks:
+  infra_gateway:
+    external: true
+    name: infra_gateway

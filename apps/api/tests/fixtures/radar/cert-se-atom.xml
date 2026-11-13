@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="sv-SE">
+  <entry>
+    <id>https://www.cert.se/2026/10/test/</id>
+    <title>Veckobrev CVE-2026-12345</title>
+    <summary type="html">&lt;p&gt;En avgränsad sammanfattning.&lt;/p&gt;&lt;script&gt;ignored()&lt;/script&gt;</summary>
+    <link rel="alternate" href="https://www.cert.se/2026/10/test/" />
+    <published>2026-10-29T10:00:00+01:00</published>
+    <updated>2026-10-29T11:00:00+01:00</updated>
+  </entry>
+</feed>

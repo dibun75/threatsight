@@ -1,0 +1,19 @@
+ThreatSight Helm pilot chart ({{ .Chart.Version }})
+
+Profile: {{ .Values.global.deploymentProfile }}
+Public origin: {{ .Values.publicOrigin }}
+
+This chart does NOT claim commercial production readiness, HA, SLA, compliance, or certification.
+
+Required customer-provided Secrets (not rendered by this chart):
+  - {{ .Values.secrets.databaseUrlSecretName }}
+  - {{ .Values.secrets.oidcClientSecretName }}
+  - {{ .Values.secrets.radarTokenSecretName }} (intel-worker only)
+  - {{ .Values.secrets.vulncheckTokenSecretName }} (intel-worker only)
+  - {{ .Values.secrets.signingKeySecretName }} (evidence-signer only)
+
+Ingress is {{ if .Values.ingress.enabled }}ENABLED{{ else }}DISABLED by default — configure customer TLS/Ingress{{ end }}.
+External PostgreSQL is required. No bundled production database is provided.
+
+Web service: {{ include "threatsight.fullname" . }}-web:{{ .Values.web.service.port }}
+API service: {{ include "threatsight.fullname" . }}-api:{{ .Values.api.service.port }}

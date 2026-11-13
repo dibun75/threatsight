@@ -1,0 +1,5 @@
+*.md
+tests/
+.git
+.gitignore
+.DS_Store

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["publicOrigin", "global", "config", "secrets"],
+  "properties": {
+    "global": {
+      "type": "object",
+      "required": ["deploymentProfile"],
+      "properties": {
+        "deploymentProfile": {
+          "type": "string",
+          "enum": ["pilot-kubernetes"]
+        }
+      }
+    },
+    "publicOrigin": {
+      "type": "string",
+      "pattern": "^https://[^/]+$"
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "env": { "const": "production" },
+        "authMode": { "enum": ["oidc", "local"] },
+        "openapiEnabled": { "const": false },
+        "publicDemo": { "const": false },
+        "sandboxDefault": { "const": true }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "postgresql": {
+      "type": "object",
+      "properties": {
+        "requiredExternal": { "const": true }
+      }
+    }
+  },
+  "additionalProperties": true
+}

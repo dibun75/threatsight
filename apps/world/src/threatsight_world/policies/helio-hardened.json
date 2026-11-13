@@ -1,0 +1,12 @@
+{
+  "name": "helio-hardened",
+  "description": "Least-privilege rules for the Helio Cloud agents. on_fail=hold sends the call to a named approver instead of refusing it.",
+  "rules": [
+    {"id": "tenant-isolation", "tool": "lookup_tenant", "type": "requester_owns_tenant"},
+    {"id": "refund-account-on-file", "tool": "issue_refund", "type": "supplier_registered", "on_fail": "hold", "note": "A refund to a bank account that is not on file waits for a person to call the customer."},
+    {"id": "refund-limit-needs-approver", "tool": "issue_refund", "type": "max_amount_without_approver", "limit": 5000, "amount_arg": "amount_eur", "on_fail": "hold"},
+    {"id": "iam-read-only", "tool": "iam_admin", "type": "allow_actions", "actions": ["list_users", "read_audit_log"]},
+    {"id": "cloud-read-only", "tool": "cloud_admin", "type": "allow_actions", "actions": ["list_backups", "read_logs"]},
+    {"id": "email-internal-only", "tool": "send_email", "type": "internal_recipients_only"}
+  ]
+}

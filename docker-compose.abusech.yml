@@ -1,0 +1,14 @@
+# Optional abuse.ch Feodo Tracker and URLhaus collection (CC0 data).
+# The Auth-Key (free, https://auth.abuse.ch/) is optional here but abuse.ch is moving feeds behind it.
+# It is mounted into the intelligence worker only. Reuse the ThreatFox key file if you have one.
+services:
+  intel-worker:
+    environment:
+      THREATSIGHT_FEODO_ENABLED: "true"
+      THREATSIGHT_URLHAUS_ENABLED: "true"
+      THREATSIGHT_ABUSECH_AUTH_KEY_FILE: /run/secrets/abusech_auth_key
+    volumes:
+      - type: bind
+        source: ${THREATSIGHT_ABUSECH_AUTH_KEY_PATH:?set the host Auth-Key path}
+        target: /run/secrets/abusech_auth_key
+        read_only: true

@@ -1,0 +1,13 @@
+# Optional ThreatFox collection. Select an explicitly authorized usage mode.
+# The Auth-Key is mounted into the intelligence worker only.
+services:
+  intel-worker:
+    environment:
+      THREATSIGHT_THREATFOX_ENABLED: "true"
+      THREATSIGHT_THREATFOX_USAGE_MODE: ${THREATSIGHT_THREATFOX_USAGE_MODE:?set personal_evaluation or commercial_entitled}
+      THREATSIGHT_THREATFOX_AUTH_KEY_FILE: /run/secrets/threatfox_auth_key
+    volumes:
+      - type: bind
+        source: ${THREATSIGHT_THREATFOX_AUTH_KEY_PATH:?set the host Auth-Key path}
+        target: /run/secrets/threatfox_auth_key
+        read_only: true

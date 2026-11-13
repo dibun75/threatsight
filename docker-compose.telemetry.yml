@@ -1,0 +1,13 @@
+# Optional Radar collection. Do not include this file until the host token file exists.
+# The API, web, runner, and connector worker do not receive the token.
+services:
+  intel-worker:
+    environment:
+      THREATSIGHT_RADAR_ENABLED: "true"
+      THREATSIGHT_DSHIELD_ENABLED: "true"
+      THREATSIGHT_RADAR_TOKEN_FILE: /run/secrets/cloudflare_radar_token
+    volumes:
+      - type: bind
+        source: ${THREATSIGHT_RADAR_TOKEN_PATH:?set the host token path}
+        target: /run/secrets/cloudflare_radar_token
+        read_only: true

@@ -1,0 +1,52 @@
+{{- if .Values.customerRunner.enabled }}
+# Optional in-cluster customer runner. Prefer a separate chart/host for production pilots.
+# Outbound-only; no host secret mounts from the reference environment.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "threatsight.fullname" . }}-customer-runner
+  labels:
+    {{- include "threatsight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: customer-runner
+spec:
+  replicas: {{ .Values.customerRunner.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "threatsight.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: customer-runner
+  template:
+    metadata:
+      labels:
+        {{- include "threatsight.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: customer-runner
+    spec:
+      serviceAccountName: {{ include "threatsight.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: runner
+          image: {{ include "threatsight.image" (list .Values.image.api.repository .Values.image.api.tag .Values.image.api.digest) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command: ["python", "-m", "threatsight_runner"]
+          env:
+            - name: THREATSIGHT_RUNNER_CREDENTIAL_FILE
+              value: /run/secrets/runner_credential
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml (.Values.customerRunner.resources | default .Values.api.resources) | nindent 12 }}
+          volumeMounts:
+            - name: runner-credential
+              mountPath: /run/secrets
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: runner-credential
+          secret:
+            secretName: {{ .Values.secrets.runnerCredentialSecretName | default "threatsight-runner" }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+{{- end }}

@@ -1,0 +1,13 @@
+# Optional VulnCheck Community KEV collection.
+# Do not include this file until the host token file exists.
+# The API, web, evidence-signer, runner, connector worker, postgres, demo, and tunnel
+# do not receive the token. Radar remains on docker-compose.telemetry.yml.
+services:
+  intel-worker:
+    environment:
+      THREATSIGHT_VULNCHECK_TOKEN_FILE: /run/secrets/vulncheck_token
+    volumes:
+      - type: bind
+        source: ${THREATSIGHT_VULNCHECK_TOKEN_PATH:?set the host token path}
+        target: /run/secrets/vulncheck_token
+        read_only: true

@@ -1,0 +1,185 @@
+# Example values — no credentials. Create Secrets out-of-band.
+# Profile: pilot-kubernetes. Not a commercial production claim.
+
+global:
+  deploymentProfile: pilot-kubernetes
+  imagePullPolicy: IfNotPresent
+  labels: {}
+
+image:
+  api:
+    repository: threatsight-api
+    tag: "837e39a"
+    digest: ""
+  web:
+    repository: threatsight-web
+    tag: "837e39a"
+    digest: ""
+
+nameOverride: ""
+fullnameOverride: "threatsight"
+
+publicOrigin: "https://threatsight.example"
+
+config:
+  env: production
+  authMode: oidc
+  openapiEnabled: false
+  sandboxDefault: true
+  publicDemo: false
+  allowSyntheticLoaders: false
+  logJson: true
+  logLevel: INFO
+  corsOrigins: "https://threatsight.example"
+  webOrigins: "https://threatsight.example"
+  oidc:
+    issuer: ""
+    audience: ""
+    clientId: ""
+    authorizationEndpoint: ""
+    tokenEndpoint: ""
+    jwksUri: ""
+    redirectUri: "https://threatsight.example/api/v1/auth/callback"
+    operatorGroups: ""
+    auditorGroups: ""
+    workspaceAdminGroups: ""
+    platformAdminGroups: ""
+
+# Secret names created by the customer (not embedded).
+secrets:
+  databaseUrlSecretName: threatsight-database
+  databaseUrlSecretKey: url
+  oidcClientSecretName: threatsight-oidc
+  oidcClientSecretKey: client-secret
+  radarTokenSecretName: threatsight-radar
+  radarTokenSecretKey: token
+  vulncheckTokenSecretName: threatsight-vulncheck
+  vulncheckTokenSecretKey: token
+  signingKeySecretName: threatsight-signing-key
+  signingKeySecretKey: private-key
+
+postgresql:
+  # External PostgreSQL is required. This chart does not bundle a production database.
+  requiredExternal: true
+
+api:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  service:
+    port: 8000
+
+web:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    port: 3000
+
+intelWorker:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+evidenceSigner:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+migrate:
+  enabled: true
+  backoffLimit: 1
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  api:
+    enabled: true
+    minAvailable: 1
+  web:
+    enabled: true
+    minAvailable: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automount: false
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+probes:
+  api:
+    readiness:
+      path: /health
+      port: 8000
+    liveness:
+      path: /health
+      port: 8000
+    startup:
+      path: /health
+      port: 8000
+  web:
+    readiness:
+      path: /
+      port: 3000
+    liveness:
+      path: /
+      port: 3000
+
+customerRunner:
+  # Deployed separately; see deploy/runbooks/runner.md
+  enabled: false
+  replicas: 1
+
+backup:
+  cronJob:
+    enabled: false
+    schedule: "0 2 * * *"
+    image: postgres:16-alpine
+    destinationPath: /backup
+
+# External PostgreSQL notes (customer-managed; not HA by this chart):
+# - Prefer TLS (verify-full) with CA trust
+# - Separate roles: migration owner, app runtime, backup operator
+# - Connection pool sizing and timeouts are customer-tuned

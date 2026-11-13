@@ -1,0 +1,121 @@
+name: release
+
+# Push a tag such as v0.2.0 to build and publish:
+# - the threatsight-world wheel and sdist, attached to a GitHub release
+# - Docker images on GitHub Container Registry (ghcr.io/<owner>/threatsight-*)
+# - PyPI, only when the repository variable PYPI_PUBLISH is "true" and PyPI trusted publishing is set up
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test the engine
+        run: |
+          pip install -e "./apps/world[dev]"
+          pytest apps/world/tests -q
+      - name: Build wheel and sdist
+        run: python -m build apps/world --outdir dist
+      - name: Check metadata
+        run: twine check dist/*
+      - name: Install the wheel in a clean environment and run every scenario
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/*.whl
+          cd /tmp && /tmp/clean/bin/threatsight-world suite --profile all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  github-release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Create the release with the packages attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+
+  images:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: threatsight-world
+            context: apps/world
+            file: apps/world/server.Dockerfile
+          - name: threatsight-world-cli
+            context: apps/world
+            file: apps/world/Dockerfile
+          - name: threatsight-api
+            context: apps/api
+            file: apps/api/Dockerfile
+          - name: threatsight-web
+            context: apps/web
+            file: apps/web/Dockerfile
+          - name: threatsight-demo-agent
+            context: apps/demo-agent
+            file: apps/demo-agent/Dockerfile
+          - name: threatsight-demo-site
+            context: apps/demo-site
+            file: apps/demo-site/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  pypi:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "threatsight-world"
+version = "0.2.0"
+description = "Test what AI agents actually do with their tools: fictional organisations, attack scenarios, a policy gateway, deterministic judges and tamper-evident evidence"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Arunav Mandal and the ThreatSight contributors" }]
+keywords = ["ai-security", "llm", "agents", "prompt-injection", "red-team", "owasp", "mitre-atlas", "evaluation"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.urls]
+Homepage = "https://threatsight.io"
+Source = "https://github.com/dibun75/threatsight"
+Issues = "https://github.com/dibun75/threatsight/issues"
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5", "build==1.2.2.post1", "twine==6.1.0"]
+
+[project.scripts]
+threatsight-world = "threatsight_world.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+threatsight_world = ["policies/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

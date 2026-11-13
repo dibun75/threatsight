@@ -1,0 +1,15 @@
+"""Bounds for threat-to-asset comparison."""
+
+from __future__ import annotations
+
+MAX_EVENTS = 500
+MAX_NODES = 500
+MAX_COMPARISONS = 5000
+MAX_MATCHES_PER_EVENT = 20
+MAX_MATCHES_PER_ASSET = 20
+MAX_DEPTH = 4
+MAX_FANOUT = 20
+MAX_RESULTS = 200
+MAX_SECONDS = 2
+MAX_ALIASES = 100
+MAX_VERSION_LENGTH = 64

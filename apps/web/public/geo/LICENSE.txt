@@ -1,0 +1,9 @@
+Natural Earth 1:110m cultural vectors, admin 0 countries.
+
+Source: https://www.naturalearthdata.com/downloads/110m-cultural-vectors/
+File: ne_110m_admin_0_countries, taken from the natural-earth-vector GeoJSON mirror.
+Version: Natural Earth 5 cultural vectors as published in that mirror on 2026-10-31.
+Modification: properties other than ISO_A2 and NAME were removed. Geometry was not simplified further.
+License: Natural Earth data is public domain. No permission is required.
+
+This file is served by the ThreatSight web origin. The browser does not contact a map tile service.
