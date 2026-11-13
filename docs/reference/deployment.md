@@ -1,6 +1,6 @@
 # Deployment
 
-Enterprise pilot packaging (Compose hardened + Helm) lives under [`deploy/`](../deploy/README.md). See [ADR 0040](./decisions/0040-enterprise-pilot-packaging.md). That packaging does **not** claim commercial production readiness, HA, SLA, or certification. The home-host stack remains a **reference** installation.
+Enterprise pilot packaging (Compose hardened + Helm) lives under [`deploy/`](../../deploy/README.md). See [ADR 0040](./decisions/0040-enterprise-pilot-packaging.md). That packaging does **not** claim commercial production readiness, HA, SLA, or certification. The single-host stack remains a **reference** installation.
 
 ## M0: Docker-first local runtime
 
