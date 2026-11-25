@@ -29,6 +29,7 @@ type Run = {
   approvals?: Approval[];
   organisation: string;
   profile?: string;
+  ai_act?: { regulation: string; disclaimer: string; items: { article: string; title: string; strength: string; evidence: string }[] };
 };
 type Scenario = { id: string; control_title: string; tags: string[]; agentic?: string[]; atlas?: string[]; attack_message: string };
 type Agent = { id: string; score: number; worst_path: { input: string; tool: string; data: string }; tools: { name: string; guarded: boolean }[] };
@@ -249,6 +250,24 @@ export default function ReportPage() {
                 </li>
               ))}
             </ul>
+          </section>
+        ) : null}
+
+        {run.ai_act?.items.length ? (
+          <section>
+            <h2>Evidence for the EU AI Act</h2>
+            <ul>
+              {run.ai_act.items.map((it) => (
+                <li key={it.article}>
+                  <strong>
+                    {it.article}, {it.title}
+                    {it.strength === "gap" ? " (gap found)" : it.strength === "none" ? " (nothing shown)" : ""}.
+                  </strong>{" "}
+                  {it.evidence}
+                </li>
+              ))}
+            </ul>
+            <p className="report-note">{run.ai_act.disclaimer}</p>
           </section>
         ) : null}
 
