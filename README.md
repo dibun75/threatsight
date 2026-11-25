@@ -95,6 +95,7 @@ The demo world never writes into the platform's database: synthetic results stay
 - [Quickstart](docs/quickstart.md)
 - [How it works](docs/how-it-works.md)
 - [Test your own agent](docs/test-your-agent.md)
+- [EU AI Act: what the report gives evidence for](docs/eu-ai-act.md)
 - [Limits](docs/limits.md)
 
 Reference material (deployment, configuration, security model, decisions) is listed in [docs/README.md](docs/README.md).
