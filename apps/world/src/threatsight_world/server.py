@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from threatsight_world.ai_act import ai_act_evidence
 from threatsight_world import evidence as ev
 from threatsight_world import profiles
 from threatsight_world.assess import Assessment, LiveProvider, Provider, ReplayProvider, ScriptedProvider, load_recording, retest, run_assessment
@@ -531,7 +532,7 @@ def make_handler(cfg: Config) -> type[BaseHTTPRequestHandler]:
                 return self._send(200, {**DATA_LABEL, "runs": list_runs(cfg)})
             if len(rest) == 2 and rest[0] == "runs":
                 r = get_run(cfg, rest[1])
-                return self._send(200, r) if r else self._error(HTTPStatus.NOT_FOUND, "run not found")
+                return self._send(200, {**r, "ai_act": ai_act_evidence(r)}) if r else self._error(HTTPStatus.NOT_FOUND, "run not found")
             if len(rest) == 3 and rest[0] == "runs" and rest[2] == "evidence.jsonl" and RUN_ID.match(rest[1]):
                 p = cfg.runs_dir / f"{rest[1]}.evidence.jsonl"
                 if not p.is_file():
